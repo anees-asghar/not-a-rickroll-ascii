@@ -2,25 +2,36 @@ import os
 import time
 from PIL import Image
 
-N_FRAMES = 90
-SLEEP_TIME = 0.05 # can be lower for faster machines
-FRAME_HEIGHT = 150 # can be higher (200-250) for faster machines
-MAX_INTENSITY = 255
-ASCII_SCALE = "`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
+
+N_FRAMES = 90 # the number of frames we have available
+SLEEP_TIME = 0.05 # how long we want to give the program to print a frame before loading the next frame
+FRAME_HEIGHT = 150 # height of a single frame in characters, can be higher (200-250) for faster machines
+MAX_INTENSITY = 255 # the max intensity of a single pixel (0-255)
+INTENSITY_SCALE = "`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$" # ASCII sorted by the how much background they cover
+
 
 def get_pixel_matrix(img, height, width):
+    """
+        Return a pixel matrix of size height x width from the image provided, where each pixel is 
+        a tuple of rgb values.
+    """
     pixel_matrix = []
 
+    # we extract a PixelAccess object from image which is used for easier access to image pixels
     pixels = img.load()
+
     for y in range(height):
-        row = []
-        for x in range(width):
-            row.append(pixels[x, y])
+        row = [pixels[x, y] for x in range(width)]
         pixel_matrix.append(row)
     
     return pixel_matrix
 
+
 def get_intensity_matrix(pixel_matrix):
+    """
+        Return an intensity matrix provided a pixel matrix, where the intensity of a pixel is the 
+        average of its rgb values.
+    """
     intensity_matrix = []
     
     for row in pixel_matrix:
@@ -33,24 +44,33 @@ def get_intensity_matrix(pixel_matrix):
     
     return intensity_matrix
 
+
 def get_char_matrix(intensity_matrix):
+    """
+        Return a character matrix provided an intensity matrix, where each pixel is assigned a 
+        character from the INTENSITY_SCALE based on its intensity.
+    """
     char_matrix = []
     
     for row in intensity_matrix:
-        new_row = []
-        for pixel_intensity in row:
-            char = convert_to_char(pixel_intensity)
-            new_row.append(char)
+        new_row = [convert_to_char(pi) for pi in row]
         char_matrix.append(new_row)
     
     return char_matrix
 
+
 def convert_to_char(pixel_intensity):
-    global ASCII_SCALE, MAX_INTENSITY
-    idx = int(pixel_intensity / MAX_INTENSITY * (len(ASCII_SCALE)-1))
-    return ASCII_SCALE[idx]
+    """
+        Return a character from the INTENSITY_SCALE based on the pixel_intensity provided.
+    """
+    idx = int(pixel_intensity / MAX_INTENSITY * (len(INTENSITY_SCALE)-1))
+    return INTENSITY_SCALE[idx]
+
 
 def get_ascii_frame(frame_name):
+    """
+        Return a frame as string that can be printed on the terminal provided a frame_name.
+    """
     # load file
     filepath = f"images/{frame_name}"
     img = Image.open(filepath)
@@ -59,27 +79,30 @@ def get_ascii_frame(frame_name):
     img.thumbnail((1000, FRAME_HEIGHT))
     width, height = img.size
 
-    # convert image to a pixel matrix of size height x width, where each pixel is 
-    # a tuple of rgb values
+    # extract pixel matrix from image
     pixel_matrix = get_pixel_matrix(img, height, width)
 
-    # transform pixel matrix to represent each pixel using a single number instead of a tuple
+    # get intensity matrix from pixel_matrix
     intensity_matrix = get_intensity_matrix(pixel_matrix)
 
-    # create char matrix assigning each pixel an ascii character based on its intensity
+    # get character matrix from intensity matrix
     char_matrix = get_char_matrix(intensity_matrix)
     
     # create frame
     frame = ""
     for row in char_matrix:
-        # each char in row is multiplied by 3 as the height of a char in terminal is
-        # 3 times its width
+        # the height of a character on a terminal window is roughly 3 times its width, to offset
+        # this we print each character of each row of char_matrix 3 times
         row = "".join([c*3 for c in row])
         frame += row + '\n'
     
     return frame
 
-if __name__ == "__main__":
+
+def main():
+    """
+        Load all frames then keep looping over them to display each one.
+    """
     # load all frames
     print('Loading frames...')
     frames = []
@@ -99,3 +122,7 @@ if __name__ == "__main__":
 
         # increment frame number, set to 0 if last frame is reached
         frame_no = 0 if frame_no == N_FRAMES-1 else frame_no+1 
+
+
+if __name__ == "__main__":
+    main()
